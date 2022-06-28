@@ -226,7 +226,7 @@ class KalmanBoxTracker(object):
         iou = ima_batch(self.static_box[np.newaxis, :4], detection[np.newaxis, :4])[0][0]
         if iou < self.overlap_threshold:
             self.move_streak += 1
-        else:
+        elif iou > min(self.overlap_threshold + 0.2, 0.9):  # 平滑判断
             self.move_streak = 0
 
     def _save_record(self, folder="data/delete"):
@@ -302,7 +302,11 @@ class OCSort(object):
             outputs.append((track.last_prediction, track.last_observation[:4], track.id, track.alarm,
                             track.current_timestamp - track.first_timestamp))
 
-        return outputs
+        regions = []
+        for area in self.areas:
+            regions.append({"region": area, "park": len(outputs)})
+
+        return regions, outputs
 
     def _match(self, detections):
         # split track set into confirmed and unconfirmed tracks.
@@ -358,19 +362,14 @@ class OCSort(object):
         detections[detections[:, 5] == 3, 5] = 1
 
         remind_classes = [1, 2, 3]
-        class_threshold = {0: 0.5, 1: 0.5, 2: 0.6, 3: 0.5}
 
         # 判断目标框和区域的关系
         remind = [False] * detections.shape[0]
         for i in range(detections.shape[0]):
-            if int(detections[i][5]) == 2:
-                point = ((detections[i][0] + detections[i][2]) / 2, (detections[i][1] + detections[i][3]) / 2)  # 目标中心点
-            else:
-                point = ((detections[i][0] + detections[i][2]) / 2, detections[i][3])  # 底部中心点
+            point = ((detections[i][0] + detections[i][2]) / 2, (detections[i][1] + detections[i][3]) / 2)  # 目标中心点
             for counter in self.areas:
                 distance = cv2.pointPolygonTest(np.array(counter), point, False)
-                if distance != -1 and int(detections[i][5]) in remind_classes and \
-                        detections[i][4] > class_threshold[int(detections[i][5])]:
+                if distance != -1 and int(detections[i][5]) in remind_classes:
                     remind[i] = True
                     break
         return detections[remind]
