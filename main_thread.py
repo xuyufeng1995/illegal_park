@@ -10,8 +10,6 @@ from park import park_process
 
 
 def decode(rtsp, buffer_queue):
-    # rtsp = rtsp.replace("/home/videos/feijiweiting/", "/home/xuyufeng/Projectes/datasets/非机动车违规停放/")
-    rtsp = rtsp.replace("/home/videos/weiguitingche/", "/home/xuyufeng/Projectes/datasets/非机动车违规停放/")
     cap = cv2.VideoCapture(rtsp)
     fps = cap.get(cv2.CAP_PROP_FPS)
     buffer_queue.put(fps)
@@ -63,6 +61,7 @@ class Worker(threading.Thread):
         result_queue = queue.Queue(maxsize=50)
         self.param["pictureQueue"] = data_queue
         self.param["resultQueue"] = result_queue
+        self.param["buildType"] = "release"
 
         decode_thread = threading.Thread(target=decode, args=(self.param["cameraAddress"], buffer_queue))
         vas_thread = threading.Thread(target=vas, args=(buffer_queue, data_queue))
@@ -94,3 +93,18 @@ class Worker(threading.Thread):
                                                    ctypes.py_object(SystemExit))
 
         logger.warning("*******************************************")
+
+
+if __name__ == "__main__":
+    task_param = dict()
+    task_param["cameraId"] = "9a8dc1ae-f1ef-46a9-8315-a08245a38f5f"
+    task_param["cameraAddress"] = "/home/xuyufeng/Projectes/datasets/jicheweiting/永安小学门口3（三期）_2022-04-25_16：40：00_2022-04-25_16：55：00_85B06747_1.mp4"
+    task_param["configPath"] = "data/algo_42.yaml"
+    task_param["taskId"] = "ac0c4149-f42a-41fb-9530-f7cab3fbb74b"
+    task_param["algorithmId"] = "42"
+    task_param["alarm_url"] = "http://5.5.3.229:7777/alarm/commit"
+    task_param["host_ip"] = "5.5.5.238"
+    task_param["host_port"] = 9810
+    task_thread = Worker(task_param)
+    task_thread.start()
+    task_thread.join()
